@@ -1,22 +1,26 @@
-﻿namespace SyncTwoFolders
+﻿using System.IO;
+
+namespace SyncTwoFolders
 {
     internal class SyncCommand : ICommand
     {
         private readonly string _source;
         private readonly string _destination;
+        private readonly string _logFilePath;
 
-        public SyncCommand(string source, string destination)
+        public SyncCommand(string source, string destination, string logFilePath)
         {
             _source = source;
             _destination = destination;
+            _logFilePath = logFilePath;
         }
 
         public void Execute()
         {
-            SyncDirectories(_source, _destination);
+            SyncDirectories(_source, _destination, _logFilePath);
         }
 
-        private void SyncDirectories(string sourcePath, string destinationPath)
+        private void SyncDirectories(string sourcePath, string destinationPath, string logFilePath)
         {
             // source lists
             var sourceFileList = Directory.GetFiles(sourcePath);
@@ -26,38 +30,48 @@
             var destinationFileList = Directory.GetFiles(destinationPath);
             var destinationDirectoryList = Directory.GetDirectories(destinationPath);
 
+            var sw = new StreamWriter(logFilePath, true);
+            sw.WriteLine("---------------//-----------------");
+            sw.WriteLine();
+
             try
             {
                 // copies all files from source to replica
                 foreach (var file in sourceFileList)
                 {
                     File.Copy(file, file.Replace(sourcePath, destinationPath), true);
+                    sw.WriteLine($"File '{file}' copied from '{sourcePath}' to '{destinationPath}' at '{DateTime.Now.ToString()}'");
                 }
 
                 // copies all directories from source to replica
                 foreach (var directory in sourceDirectoryList)
                 {
-                    if (!Directory.Exists(directory.Replace(sourcePath, destinationPath)))
-                    {
-                        CopyDirectory(sourcePath, destinationPath);
-                    }
+                    CopyDirectory(sourcePath, destinationPath);
+                    sw.WriteLine($"Directory '{directory}' copied from '{sourcePath}' to '{destinationPath}' at '{DateTime.Now.ToString()}'");
                 }
 
                 // deletes all files from replica that do not exist on source anymore
                 foreach (var file in destinationFileList)
                 {
-                    if (!File.Exists(sourcePath + Path.GetFileName(file)))
+                    if (!File.Exists(sourcePath + @"\" + Path.GetFileName(file)))
+                    {
                         File.Delete(file);
+                        sw.WriteLine($"File '{file}' deleted from '{destinationPath}' at '{DateTime.Now.ToString()}'");
+                    }
                 }
 
                 // deletes all directories from replica that do not exist on source anymore
                 foreach (var directory in destinationDirectoryList)
                 {
-                    if (!Directory.Exists(sourcePath + Path.GetDirectoryName(directory)))
-                        Directory.Delete(directory);
+                    if (!Directory.Exists(sourcePath + @"\" + Path.GetFileName(directory)))
+                    {
+                        Directory.Delete(directory, true);
+                        sw.WriteLine($"Directory '{directory}' deleted from '{destinationPath}' at '{DateTime.Now.ToString()}'");
+                    }
                 }
-
                 Console.WriteLine("Sync Completed!");
+                sw.WriteLine();
+                sw.Close();
             }
             catch (Exception e)
             {
@@ -82,6 +96,18 @@
                 string destSubdir = Path.Combine(destinationDirectory, Path.GetFileName(subdir));
                 CopyDirectory(subdir, destSubdir);
             }
+        }
+
+        private string GetLogFolderPath(string path)
+        {
+            var logFolderPath = Path.GetDirectoryName(path) + @"\logs";
+
+            if (!Directory.Exists(logFolderPath))
+            {
+                Directory.CreateDirectory(logFolderPath);
+            }
+
+            return logFolderPath;
         }
     }
 }
