@@ -4,9 +4,15 @@
     {
         static void Main(string[] args)
         {
-            var source = @"C:\projects\SyncTwoFolders\folders\source";
-            var replica = @"C:\projects\SyncTwoFolders\folders\replica";
-            var logFilePath = @"C:\projects\SyncTwoFolders\folders\logs\sync_log.txt";
+            ConsoleLogger.PrintMessage("Welcome! Please introduce source folder path, replica folder path and log file path");
+            ConsoleLogger.PrintMessage("Please, press enter to continue...");
+            Console.ReadKey();
+
+            var source = FilePathValidator.CheckIfEmptyPath("source folder");
+            var replica = FilePathValidator.CheckIfEmptyPath("replica folder");
+            var logFilePath = FilePathValidator.CheckIfEmptyPath("log file");
+
+            Console.ReadKey();
 
             var syncCommand = new SyncCommand(source, replica, logFilePath);
             var fileManager = new FileManager(syncCommand);
